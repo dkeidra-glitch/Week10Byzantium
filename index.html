@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>See, Think, Wonder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a dark "gallery wall" viewer up top, three-column response board below, gated reveal at the end. */
+:root{
+  --bg:#eef0f1; --surface:#ffffff; --fg:#1b2226; --muted:#5b666c; --line:#d3d8db;
+  --wall:#20282c; --wall-fg:#e9ecee;
+  --accent:#2e5a87; --accent-soft:#e3ebf3; --ochre:#a8781e;
+  --display:"Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a1d; --surface:#1c2428; --fg:#e6eaec; --muted:#9aa5ab; --line:#30393e;
+  --wall:#0c1012; --wall-fg:#e9ecee; --accent:#8db4dc; --accent-soft:#22313f; --ochre:#d8a64a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a1d; --surface:#1c2428; --fg:#e6eaec; --muted:#9aa5ab; --line:#30393e;
+  --wall:#0c1012; --wall-fg:#e9ecee; --accent:#8db4dc; --accent-soft:#22313f; --ochre:#d8a64a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:36px}
+h1,h2{font-family:var(--display);font-weight:400;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.2rem,5vw,3.4rem)}
+h2{font-size:1.9rem}
+.eyebrow{font:500 .75rem/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ochre)}
+header{display:grid;gap:12px}
+header p{margin:0;max-width:64ch;color:var(--muted)}
+
+/* viewer */
+.viewer{background:var(--wall);border-radius:6px;overflow:hidden;display:grid}
+.stage{position:relative;height:min(68vh,620px);min-height:340px;overflow:hidden;cursor:grab;touch-action:none;user-select:none}
+.stage.dragging{cursor:grabbing}
+.stage img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;will-change:transform;-webkit-user-drag:none}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid #ffffff1a;color:var(--wall-fg)}
+.toolbar button{font:500 .9rem var(--body);color:var(--wall-fg);background:#ffffff14;border:1px solid #ffffff26;border-radius:4px;padding:6px 12px;cursor:pointer;min-width:40px}
+.toolbar button:hover{background:#ffffff26}
+.toolbar button:focus-visible,.btn:focus-visible,textarea:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+.zoomread{font:500 .85rem var(--mono);font-variant-numeric:tabular-nums;min-width:4.5ch;text-align:center}
+.hint{margin-left:auto;font-size:.82rem;opacity:.7}
+@media (max-width:640px){.hint{margin-left:0;width:100%}}
+
+/* responses */
+.part{display:grid;gap:18px}
+.part-head{display:grid;gap:8px}
+.part-head p{margin:0;max-width:66ch;color:var(--muted)}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.board{grid-template-columns:1fr}}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:18px;display:grid;gap:10px;align-content:start;min-width:0}
+.col h3{font-family:var(--display);font-weight:400;font-size:1.6rem;margin:0;font-style:italic}
+.col .ask{margin:0;font-size:.9rem;color:var(--muted)}
+.col ul{margin:0;padding-left:1.1em;font-size:.85rem;color:var(--muted)}
+textarea{width:100%;min-height:200px;resize:vertical;font:15px/1.55 var(--body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+.count{font:400 .75rem var(--mono);color:var(--muted);text-align:right}
+
+.gate{background:var(--accent-soft);border-radius:6px;padding:22px;display:grid;gap:14px;justify-items:start}
+.gate p{margin:0;max-width:64ch}
+.btn{font:600 .95rem var(--body);border-radius:4px;padding:10px 18px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:var(--surface);text-decoration:none;display:inline-block}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.reveal{display:grid;gap:14px}
+.reveal textarea{min-height:170px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.status{font-size:.85rem;color:var(--muted)}
+.copyfallback{width:100%;min-height:160px;font:13px/1.5 var(--mono)}
+footer{font-size:.8rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">ARH 2050 · Looking Exercise</span>
+    <h1>Look before you read</h1>
+    <p>Here is a work of art from the Metropolitan Museum of Art's collection, shown with no title, date, or label. Spend a few minutes with it. Zoom in on details, then write your observations below. You'll find out what it is at the end.</p>
+  </header>
+
+  <section class="viewer" aria-label="Artwork viewer">
+    <div class="stage" id="stage" tabindex="0" aria-label="Artwork. Use plus and minus keys to zoom, arrow keys to move.">
+      <img id="art" alt="Unidentified artwork for close looking" src="artwork.jpg" draggable="false">
+    </div>
+    <div class="toolbar">
+      <button id="zout" aria-label="Zoom out">−</button>
+      <span class="zoomread" id="zread">100%</span>
+      <button id="zin" aria-label="Zoom in">+</button>
+      <button id="zfit">Fit</button>
+      <button id="zfull">Full screen</button>
+      <span class="hint">Scroll or pinch to zoom · drag to move · double-click to zoom in</span>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="part-head">
+      <span class="eyebrow">Part 1</span>
+      <h2>See, Think, Wonder</h2>
+      <p>Write one paragraph under each heading. Your drafts save in this browser as you type.</p>
+    </div>
+    <div class="board">
+      <div class="col">
+        <h3>I see…</h3>
+        <p class="ask">Factual observations only. What is actually there?</p>
+        <ul><li>Subject(s), figures, objects</li><li>Medium and materials</li><li>Color, line, texture, condition</li></ul>
+        <textarea id="see" aria-label="I see"></textarea>
+        <div class="count" data-for="see"></div>
+      </div>
+      <div class="col">
+        <h3>I think…</h3>
+        <p class="ask">Logical inferences, grounded in this week's reading.</p>
+        <ul><li>Possible themes or meaning</li><li>Likely time period</li><li>Culture or place of origin</li></ul>
+        <textarea id="think" aria-label="I think"></textarea>
+        <div class="count" data-for="think"></div>
+      </div>
+      <div class="col">
+        <h3>I wonder…</h3>
+        <p class="ask">Open-ended questions for your classmates.</p>
+        <ul><li>What is still unclear?</li><li>What would you ask the maker?</li><li>Avoid yes/no questions</li></ul>
+        <textarea id="wonder" aria-label="I wonder"></textarea>
+        <div class="count" data-for="wonder"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="part-head">
+      <span class="eyebrow">Part 2</span>
+      <h2>Reveal and reflect</h2>
+    </div>
+    <div class="gate" id="gate">
+      <p>Finish all three paragraphs first. Once you reveal the object, you can't un-see it.</p>
+      <button class="btn" id="revealBtn" disabled>Reveal the object</button>
+      <span class="status" id="gateStatus">Write something in all three boxes to unlock.</span>
+    </div>
+    <div class="reveal" id="reveal" hidden>
+      <div class="actions">
+        <a class="btn" href="https://www.metmuseum.org/art/collection/search/469960" target="_blank" rel="noopener">Learn more on the Met's website ↗</a>
+      </div>
+      <p style="margin:0;max-width:66ch">Read the object page, then come back and review your Part 1 observations. Were you able to confirm or debunk any of your assumptions? Which ones?</p>
+      <textarea id="reflect" aria-label="Reflection"></textarea>
+      <div class="count" data-for="reflect"></div>
+    </div>
+  </section>
+
+  <section class="part">
+    <div class="part-head">
+      <span class="eyebrow">Post</span>
+      <h2>Copy your discussion post</h2>
+      <p>Copies all four sections with their headers, ready to paste into the discussion board.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="copyBtn">Copy my post</button>
+      <button class="btn ghost" id="clearBtn">Clear my drafts</button>
+      <span class="status" id="copyStatus" role="status"></span>
+    </div>
+    <textarea class="copyfallback" id="fallback" hidden readonly aria-label="Your post text"></textarea>
+  </section>
+
+  <footer>Image: The Metropolitan Museum of Art, Open Access (public domain).</footer>
+</div>
+
+<script>
+(function(){
+  const stage=document.getElementById('stage'), img=document.getElementById('art'), zread=document.getElementById('zread');
+  let s=1,x=0,y=0,fit=1,MAX=8;
+  function apply(){img.style.transform=`translate(${x}px,${y}px) scale(${s})`;zread.textContent=Math.round(s/fit*100)+'%';}
+  function clamp(){
+    const W=stage.clientWidth,H=stage.clientHeight,w=img.naturalWidth*s,h=img.naturalHeight*s;
+    x = w<=W ? (W-w)/2 : Math.min(0,Math.max(W-w,x));
+    y = h<=H ? (H-h)/2 : Math.min(0,Math.max(H-h,y));
+  }
+  function doFit(){
+    if(!img.naturalWidth)return;
+    fit=Math.min(stage.clientWidth/img.naturalWidth,stage.clientHeight/img.naturalHeight);
+    s=fit;x=0;y=0;clamp();apply();
+  }
+  function zoomAt(f,cx,cy){
+    const ns=Math.min(fit*MAX,Math.max(fit,s*f)); if(ns===s)return;
+    x=cx-(cx-x)*(ns/s); y=cy-(cy-y)*(ns/s); s=ns; clamp(); apply();
+  }
+  const center=()=>[stage.clientWidth/2,stage.clientHeight/2];
+  img.addEventListener('load',doFit); if(img.complete)doFit();
+  window.addEventListener('resize',()=>{const r=s/fit;fit=Math.min(stage.clientWidth/img.naturalWidth,stage.clientHeight/img.naturalHeight);s=fit*r;clamp();apply();});
+  document.getElementById('zin').onclick=()=>zoomAt(1.5,...center());
+  document.getElementById('zout').onclick=()=>zoomAt(1/1.5,...center());
+  document.getElementById('zfit').onclick=doFit;
+  document.getElementById('zfull').onclick=()=>{
+    const v=stage.parentElement;
+    if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});
+    else if(v.requestFullscreen)v.requestFullscreen().catch(()=>{});
+  };
+  document.addEventListener('fullscreenchange',()=>{stage.style.height=document.fullscreenElement?'calc(100vh - 56px)':'';setTimeout(doFit,50);});
+  stage.addEventListener('wheel',e=>{e.preventDefault();const r=stage.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  stage.addEventListener('dblclick',e=>{const r=stage.getBoundingClientRect();zoomAt(2,e.clientX-r.left,e.clientY-r.top);});
+  const pts=new Map(); let last=null, pinch=null;
+  stage.addEventListener('pointerdown',e=>{stage.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);stage.classList.add('dragging');last=[e.clientX,e.clientY];
+    if(pts.size===2){const [a,b]=[...pts.values()];pinch=Math.hypot(a[0]-b[0],a[1]-b[1]);}});
+  stage.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId))return; pts.set(e.pointerId,[e.clientX,e.clientY]);
+    if(pts.size===2&&pinch){const [a,b]=[...pts.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);const r=stage.getBoundingClientRect();
+      zoomAt(d/pinch,(a[0]+b[0])/2-r.left,(a[1]+b[1])/2-r.top);pinch=d;return;}
+    if(pts.size===1&&last){x+=e.clientX-last[0];y+=e.clientY-last[1];last=[e.clientX,e.clientY];clamp();apply();}
+  });
+  const end=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null;if(!pts.size){stage.classList.remove('dragging');last=null;}else last=[...pts.values()][0];};
+  stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);
+  stage.addEventListener('keydown',e=>{
+    const k=e.key, st=60;
+    if(k==='+'||k==='=')zoomAt(1.25,...center());
+    else if(k==='-'||k==='_')zoomAt(0.8,...center());
+    else if(k==='0')doFit();
+    else if(k.startsWith('Arrow')){x+=k==='ArrowLeft'?st:k==='ArrowRight'?-st:0;y+=k==='ArrowUp'?st:k==='ArrowDown'?-st:0;clamp();apply();}
+    else return; e.preventDefault();
+  });
+
+  // drafts
+  const ids=['see','think','wonder','reflect'], KEY='stw-469960';
+  let saved={}; try{saved=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+  const el=id=>document.getElementById(id);
+  function words(t){return (t.trim().match(/\S+/g)||[]).length;}
+  function update(){
+    ids.forEach(id=>{const c=document.querySelector(`.count[data-for="${id}"]`);if(c)c.textContent=words(el(id).value)+' words';});
+    const ready=['see','think','wonder'].every(id=>el(id).value.trim().length>0);
+    el('revealBtn').disabled=!ready;
+    el('gateStatus').textContent=ready?'Ready when you are.':'Write something in all three boxes to unlock.';
+    try{localStorage.setItem(KEY,JSON.stringify({...Object.fromEntries(ids.map(i=>[i,el(i).value])),revealed:!el('reveal').hidden}))}catch(e){}
+  }
+  ids.forEach(id=>{el(id).value=saved[id]||'';el(id).addEventListener('input',update);});
+  function showReveal(){el('reveal').hidden=false;el('gate').hidden=true;}
+  if(saved.revealed)showReveal();
+  el('revealBtn').onclick=()=>{showReveal();update();el('reflect').focus();};
+  update();
+
+  function post(){
+    return `I see…\n${el('see').value.trim()}\n\nI think…\n${el('think').value.trim()}\n\nI wonder…\n${el('wonder').value.trim()}\n\nReflection\n${el('reflect').value.trim()||'(not written yet)'}`;
+  }
+  el('copyBtn').onclick=()=>{
+    const t=post(), fb=el('fallback');
+    const fallback=()=>{fb.value=t;fb.hidden=false;fb.focus();fb.select();el('copyStatus').textContent='Select all and copy the text below.';};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(()=>{el('copyStatus').textContent='Copied. Paste it into your discussion post.';fb.hidden=true;}).catch(fallback);
+    } else fallback();
+  };
+  let armed=false;
+  el('clearBtn').onclick=()=>{
+    if(!armed){armed=true;el('clearBtn').textContent='Click again to erase everything';setTimeout(()=>{armed=false;el('clearBtn').textContent='Clear my drafts';},4000);return;}
+    ids.forEach(i=>el(i).value='');el('reveal').hidden=true;el('gate').hidden=false;armed=false;el('clearBtn').textContent='Clear my drafts';update();el('copyStatus').textContent='Drafts cleared.';
+  };
+})();
+</script>
+
+</body>
+</html>
